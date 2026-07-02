@@ -36,6 +36,7 @@ void mbot_read_pid_gains(const mbot_params_t* params) {
 // PID filters
 rc_filter_t left_wheel_pid;
 rc_filter_t right_wheel_pid;
+rc_filter_t back_wheel_pid;
 rc_filter_t body_vel_vx_pid;
 rc_filter_t body_vel_wz_pid;
 
@@ -43,6 +44,7 @@ int mbot_controller_init(void) {
     // Initialize PID controllers
     left_wheel_pid = rc_filter_empty();
     right_wheel_pid = rc_filter_empty();
+    back_wheel_pid = rc_filter_empty();
     body_vel_vx_pid = rc_filter_empty();
     body_vel_wz_pid = rc_filter_empty();
     
@@ -60,10 +62,18 @@ int mbot_controller_init(void) {
                   pid_gains.right_wheel.kd, 
                   pid_gains.right_wheel.tf, 
                   MAIN_LOOP_PERIOD);
+                  
+    rc_filter_pid(&back_wheel_pid, 
+                  pid_gains.back_wheel.kp, 
+                  pid_gains.back_wheel.ki, 
+                  pid_gains.back_wheel.kd, 
+                  pid_gains.back_wheel.tf, 
+                  MAIN_LOOP_PERIOD);
     
     // Enable saturation for all controllers to limit outputs between -1.0 and 1.0
     rc_filter_enable_saturation(&left_wheel_pid, -1.0, 1.0);
     rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
+    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
 
     return MBOT_OK;
 }
@@ -78,6 +88,20 @@ void mbot_motor_vel_controller(float target_left_vel, float target_right_vel,
     *left_correction = rc_filter_march(&left_wheel_pid, left_error);
     *right_correction = rc_filter_march(&right_wheel_pid, right_error);
 }
+
+void mbot_omni_motor_vel_controller(float target_left_vel, float target_right_vel, float target_back_vel,
+                              float current_left_vel, float current_right_vel, float current_back_vel,
+                              float* left_correction, float* right_correction, float* back_correction) {
+    float left_error = target_left_vel - current_left_vel;
+    float right_error = target_right_vel - current_right_vel;
+    float back_error = target_back_vel - current_back_vel;
+    
+    // Run PID controllers for each wheel
+    *left_correction = rc_filter_march(&left_wheel_pid, left_error);
+    *right_correction = rc_filter_march(&right_wheel_pid, right_error);
+    *back_correction = rc_filter_march(&back_wheel_pid, back_error);
+}
+
 
 int init_parameter_server(rclc_parameter_server_t* parameter_server, rcl_node_t* node) {
     rcl_ret_t ret;
@@ -189,6 +213,7 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_pid(&right_wheel_pid, pid_gains.right_wheel.kp, pid_gains.right_wheel.ki, 
                           pid_gains.right_wheel.kd, pid_gains.right_wheel.tf, MAIN_LOOP_PERIOD);
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
+    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
     } else if (strcmp(param_name, "right_wheel.ki") == 0) {
@@ -197,6 +222,7 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_pid(&right_wheel_pid, pid_gains.right_wheel.kp, pid_gains.right_wheel.ki, 
                           pid_gains.right_wheel.kd, pid_gains.right_wheel.tf, MAIN_LOOP_PERIOD);
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
+    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
     } else if (strcmp(param_name, "right_wheel.kd") == 0) {
@@ -205,6 +231,7 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_pid(&right_wheel_pid, pid_gains.right_wheel.kp, pid_gains.right_wheel.ki, 
                           pid_gains.right_wheel.kd, pid_gains.right_wheel.tf, MAIN_LOOP_PERIOD);
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
+    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
     } else if (strcmp(param_name, "right_wheel.tf") == 0) {
@@ -213,6 +240,7 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_pid(&right_wheel_pid, pid_gains.right_wheel.kp, pid_gains.right_wheel.ki, 
                           pid_gains.right_wheel.kd, pid_gains.right_wheel.tf, MAIN_LOOP_PERIOD);
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
+    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
     } else if (strcmp(param_name, "control_mode") == 0) {

@@ -33,6 +33,10 @@ void mbot_motor_vel_controller(float target_left_vel, float target_right_vel,
                               float current_left_vel, float current_right_vel,
                               float* left_correction, float* right_correction);
 
+void mbot_omni_motor_vel_controller(float target_left_vel, float target_right_vel, float target_back_vel,
+                              float current_left_vel, float current_right_vel, float current_back_vel,
+                              float* left_correction, float* right_correction, float* back_correction);
+
 // Populate global pid_gains from values stored in mbot_params_t
 void mbot_read_pid_gains(const mbot_params_t* params);
 
