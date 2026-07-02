@@ -15,6 +15,7 @@ typedef struct {
 typedef struct {
     pid_params_t left_wheel;
     pid_params_t right_wheel;
+    pid_params_t back_wheel;
 } mbot_pid_config_t;
 
 typedef enum {
