@@ -86,7 +86,7 @@ int8_t bhy_initialize_support(void)
 
     bhy.bus_write = &sensor_i2c_write;
     bhy.bus_read = &sensor_i2c_read;
-    bhy.delay_msec  = &bhy_delay_msec;
+    bhy.delay_msec  = (void (*)(u32))&bhy_delay_msec;
     bhy.device_addr = BHY_I2C_SLAVE_ADDRESS;
 
     bhy_init(&bhy);

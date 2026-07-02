@@ -63,9 +63,15 @@ void mbot_print_state(const mbot_state_t* state) {
     printf("| \033[32m MBot State \033[0m TIME: %lld |\n", state->timestamp_us);
 
     const char* analog_headings[] = {"AIN 0","AIN 1","AIN 2","BATT (V)"};
+#ifdef MBOT_OMNI
+    const char* enc_headings[] = {"ENC L", "ENC R", "ENC B"};
+    const char* imu_headings[] = {"ROLL", "PITCH", "YAW"};
+    const char* motor_vel_headings[] = {"MOT L", "MOT R", "MOT B"};
+#else
     const char* enc_headings[] = {"ENC L", "ENC R"};
     const char* imu_headings[] = {"ROLL", "PITCH", "YAW"};
     const char* motor_vel_headings[] = {"MOT L", "MOT R"};
+#endif
     const char* odom_headings[] = {"X", "Y", "THETA"};
     char buf[1024] = {0};
 
@@ -76,8 +82,13 @@ void mbot_print_state(const mbot_state_t* state) {
     buf[0] = '\0';
 
     // Encoders
+#ifdef MBOT_OMNI
+    int encs[1][3] = {{state->encoder_ticks[0], state->encoder_ticks[1], state->encoder_ticks[2]}};
+    generateTableInt(buf, 1, 3, "ENCODERS", enc_headings, encs);
+#else
     int encs[1][2] = {{state->encoder_ticks[0], state->encoder_ticks[1]}};
     generateTableInt(buf, 1, 2, "ENCODERS", enc_headings, encs);
+#endif
     printf("\r%s", buf);
     buf[0] = '\0';
 
@@ -88,8 +99,13 @@ void mbot_print_state(const mbot_state_t* state) {
     buf[0] = '\0';
 
     // Motor velocities
+#ifdef MBOT_OMNI
+    float motor_array[1][3] = {{state->wheel_vel[0], state->wheel_vel[1], state->wheel_vel[2]}};
+    generateTableFloat(buf, 1, 3, "MOTOR", motor_vel_headings, motor_array);
+#else
     float motor_array[1][2] = {{state->wheel_vel[0], state->wheel_vel[1]}};
     generateTableFloat(buf, 1, 2, "MOTOR", motor_vel_headings, motor_array);
+#endif
     printf("\r%s", buf);
     buf[0] = '\0';
 

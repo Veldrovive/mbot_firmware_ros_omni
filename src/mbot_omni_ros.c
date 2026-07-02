@@ -131,11 +131,12 @@ int mbot_init_micro_ros(void) {
     ret = init_parameter_server(&parameter_server, &node);
     if (ret != MBOT_OK) return MBOT_ERROR;
 
-    ret = rclc_timer_init_default(
+    ret = rclc_timer_init_default2(
         &ros_publish_timer,
         &support,
         RCL_MS_TO_NS((int)(ROS_TIMER_PERIOD * 1000)),
-        timer_callback);
+        timer_callback,
+        true);
     if (ret != RCL_RET_OK) {
         printf("[ERROR] Timer init failed: %d\n", ret);
         return MBOT_ERROR;
