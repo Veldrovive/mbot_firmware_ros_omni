@@ -15,7 +15,9 @@ typedef struct {
 typedef struct {
     pid_params_t left_wheel;
     pid_params_t right_wheel;
+#ifdef MBOT_OMNI
     pid_params_t back_wheel;
+#endif
 } mbot_pid_config_t;
 
 typedef enum {
@@ -33,9 +35,11 @@ void mbot_motor_vel_controller(float target_left_vel, float target_right_vel,
                               float current_left_vel, float current_right_vel,
                               float* left_correction, float* right_correction);
 
+#ifdef MBOT_OMNI
 void mbot_omni_motor_vel_controller(float target_left_vel, float target_right_vel, float target_back_vel,
                               float current_left_vel, float current_right_vel, float current_back_vel,
                               float* left_correction, float* right_correction, float* back_correction);
+#endif
 
 // Populate global pid_gains from values stored in mbot_params_t
 void mbot_read_pid_gains(const mbot_params_t* params);

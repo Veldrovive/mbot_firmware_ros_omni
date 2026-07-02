@@ -107,6 +107,7 @@ pico_add_extra_outputs(mbot_omni_ros)
 
 target_compile_definitions(mbot_omni_ros PRIVATE 
     CFG_TUD_CDC=2
+    MBOT_OMNI=1
 )
 
 #=============================================================================
