@@ -13,15 +13,34 @@ cd ~/mbot_firmware_ros
 mkdir build
 cd build
 cmake ..
+
+# To build all firmwares:
 make
+
+# Or, to build only for MBot Classic:
+make mbot_classic_ros mbot_calibrate_classic
+
+# Or, to build only for MBot Omni:
+make mbot_omni_ros mbot_calibrate_omni
 ```
 Then flash the firmware to the pico board:
+
+**For MBot Classic:**
 ```bash
 cd ~/mbot_firmware_ros/build
 # calibration - wait until the robot stops moving
 sudo mbot-upload-firmware flash mbot_calibrate_classic.uf2
 # main firmware
 sudo mbot-upload-firmware flash mbot_classic_ros.uf2
+```
+
+**For MBot Omni:**
+```bash
+cd ~/mbot_firmware_ros/build
+# calibration - wait until the robot stops moving
+sudo mbot-upload-firmware flash mbot_calibrate_omni.uf2
+# main firmware
+sudo mbot-upload-firmware flash mbot_omni_ros.uf2
 ```
 ## Project Components
 1. `libmicroros`: This directory contains the precompiled micro-ROS static library (`libmicroros.a`) and all necessary header files for the Raspberry Pi Pico. This library includes:
