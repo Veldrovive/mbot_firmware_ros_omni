@@ -151,6 +151,7 @@ target_link_libraries(mbot_calibrate_omni
 pico_enable_stdio_usb(mbot_calibrate_omni 1)
 pico_enable_stdio_uart(mbot_calibrate_omni 0)
 pico_add_extra_outputs(mbot_calibrate_omni)
+target_compile_definitions(mbot_calibrate_omni PRIVATE MBOT_OMNI=1)
 
 # Motor Test
 add_executable(mbot_classic_motor_test
@@ -189,6 +190,7 @@ target_link_libraries(mbot_omni_motor_test
 pico_enable_stdio_usb(mbot_omni_motor_test 1)
 pico_enable_stdio_uart(mbot_omni_motor_test 0)
 pico_add_extra_outputs(mbot_omni_motor_test)
+target_compile_definitions(mbot_omni_motor_test PRIVATE MBOT_OMNI=1)
 
 # Encoder Test
 add_executable(mbot_encoder_test

@@ -543,11 +543,11 @@ int main() {
     params.control_mode = MBOT_DEFAULT_CONTROL_MODE;
 
     printf("Writing to FRAM...\n");
-    mbot_write_fram(0, sizeof(params), &params);
+    mbot_write_fram(0, sizeof(params), (uint8_t*)&params);
 
     printf("Reading from written FRAM...\n");
     mbot_params_t written;
-    mbot_read_fram(0, sizeof(written), &written);
+    mbot_read_fram(0, sizeof(written), (uint8_t*)&written);
 
     printf("\nParameters stored in FRAM (%d bytes): \n", sizeof(written));
     print_mbot_params_omni(&written);
