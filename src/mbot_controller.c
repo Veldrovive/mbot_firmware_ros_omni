@@ -30,6 +30,11 @@ void mbot_read_pid_gains(const mbot_params_t* params) {
     pid_gains.right_wheel.kd = params->right_wheel_vel_pid[2];
     pid_gains.right_wheel.tf = params->right_wheel_vel_pid[3];
 
+    pid_gains.back_wheel.kp = params->back_wheel_vel_pid[0];
+    pid_gains.back_wheel.ki = params->back_wheel_vel_pid[1];
+    pid_gains.back_wheel.kd = params->back_wheel_vel_pid[2];
+    pid_gains.back_wheel.tf = params->back_wheel_vel_pid[3];
+
     control_mode = (control_mode_t)params->control_mode;
 }
 
@@ -109,7 +114,7 @@ int init_parameter_server(rclc_parameter_server_t* parameter_server, rcl_node_t*
     // Initialize parameter server with options for low memory mode
     rclc_parameter_options_t options = {
         .notify_changed_over_dds = false,
-        .max_params = 9,  
+        .max_params = 13,  
         .allow_undeclared_parameters = false,
         .low_mem_mode = false
     };
@@ -139,6 +144,15 @@ int init_parameter_server(rclc_parameter_server_t* parameter_server, rcl_node_t*
     ret = rclc_add_parameter(parameter_server, "right_wheel.tf", RCLC_PARAMETER_DOUBLE);
     if (ret != RCL_RET_OK) return MBOT_ERROR;
 
+    ret = rclc_add_parameter(parameter_server, "back_wheel.kp", RCLC_PARAMETER_DOUBLE);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_add_parameter(parameter_server, "back_wheel.ki", RCLC_PARAMETER_DOUBLE);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_add_parameter(parameter_server, "back_wheel.kd", RCLC_PARAMETER_DOUBLE);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_add_parameter(parameter_server, "back_wheel.tf", RCLC_PARAMETER_DOUBLE);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+
     ret = rclc_add_parameter(parameter_server, "control_mode", RCLC_PARAMETER_INT);
     if (ret != RCL_RET_OK) return MBOT_ERROR;
 
@@ -159,6 +173,15 @@ int init_parameter_server(rclc_parameter_server_t* parameter_server, rcl_node_t*
     ret = rclc_parameter_set_double(parameter_server, "right_wheel.kd", pid_gains.right_wheel.kd);
     if (ret != RCL_RET_OK) return MBOT_ERROR;
     ret = rclc_parameter_set_double(parameter_server, "right_wheel.tf", pid_gains.right_wheel.tf);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+
+    ret = rclc_parameter_set_double(parameter_server, "back_wheel.kp", pid_gains.back_wheel.kp);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_parameter_set_double(parameter_server, "back_wheel.ki", pid_gains.back_wheel.ki);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_parameter_set_double(parameter_server, "back_wheel.kd", pid_gains.back_wheel.kd);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_parameter_set_double(parameter_server, "back_wheel.tf", pid_gains.back_wheel.tf);
     if (ret != RCL_RET_OK) return MBOT_ERROR;
     
     ret = rclc_parameter_set_int(parameter_server, "control_mode", control_mode);
@@ -213,7 +236,6 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_pid(&right_wheel_pid, pid_gains.right_wheel.kp, pid_gains.right_wheel.ki, 
                           pid_gains.right_wheel.kd, pid_gains.right_wheel.tf, MAIN_LOOP_PERIOD);
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
-    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
     } else if (strcmp(param_name, "right_wheel.ki") == 0) {
@@ -222,7 +244,6 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_pid(&right_wheel_pid, pid_gains.right_wheel.kp, pid_gains.right_wheel.ki, 
                           pid_gains.right_wheel.kd, pid_gains.right_wheel.tf, MAIN_LOOP_PERIOD);
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
-    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
     } else if (strcmp(param_name, "right_wheel.kd") == 0) {
@@ -231,7 +252,6 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_pid(&right_wheel_pid, pid_gains.right_wheel.kp, pid_gains.right_wheel.ki, 
                           pid_gains.right_wheel.kd, pid_gains.right_wheel.tf, MAIN_LOOP_PERIOD);
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
-    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
     } else if (strcmp(param_name, "right_wheel.tf") == 0) {
@@ -240,7 +260,38 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_pid(&right_wheel_pid, pid_gains.right_wheel.kp, pid_gains.right_wheel.ki, 
                           pid_gains.right_wheel.kd, pid_gains.right_wheel.tf, MAIN_LOOP_PERIOD);
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
-    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+            pid_updated = true;
+        }
+    } else if (strcmp(param_name, "back_wheel.kp") == 0) {
+        if (new_param->value.type == RCLC_PARAMETER_DOUBLE) {
+            pid_gains.back_wheel.kp = new_param->value.double_value;
+            rc_filter_pid(&back_wheel_pid, pid_gains.back_wheel.kp, pid_gains.back_wheel.ki, 
+                          pid_gains.back_wheel.kd, pid_gains.back_wheel.tf, MAIN_LOOP_PERIOD);
+            rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+            pid_updated = true;
+        }
+    } else if (strcmp(param_name, "back_wheel.ki") == 0) {
+        if (new_param->value.type == RCLC_PARAMETER_DOUBLE) {
+            pid_gains.back_wheel.ki = new_param->value.double_value;
+            rc_filter_pid(&back_wheel_pid, pid_gains.back_wheel.kp, pid_gains.back_wheel.ki, 
+                          pid_gains.back_wheel.kd, pid_gains.back_wheel.tf, MAIN_LOOP_PERIOD);
+            rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+            pid_updated = true;
+        }
+    } else if (strcmp(param_name, "back_wheel.kd") == 0) {
+        if (new_param->value.type == RCLC_PARAMETER_DOUBLE) {
+            pid_gains.back_wheel.kd = new_param->value.double_value;
+            rc_filter_pid(&back_wheel_pid, pid_gains.back_wheel.kp, pid_gains.back_wheel.ki, 
+                          pid_gains.back_wheel.kd, pid_gains.back_wheel.tf, MAIN_LOOP_PERIOD);
+            rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+            pid_updated = true;
+        }
+    } else if (strcmp(param_name, "back_wheel.tf") == 0) {
+        if (new_param->value.type == RCLC_PARAMETER_DOUBLE) {
+            pid_gains.back_wheel.tf = new_param->value.double_value;
+            rc_filter_pid(&back_wheel_pid, pid_gains.back_wheel.kp, pid_gains.back_wheel.ki, 
+                          pid_gains.back_wheel.kd, pid_gains.back_wheel.tf, MAIN_LOOP_PERIOD);
+            rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
     } else if (strcmp(param_name, "control_mode") == 0) {
@@ -268,6 +319,11 @@ int mbot_save_params_to_fram(void) {
     params.right_wheel_vel_pid[1] = pid_gains.right_wheel.ki;
     params.right_wheel_vel_pid[2] = pid_gains.right_wheel.kd;
     params.right_wheel_vel_pid[3] = pid_gains.right_wheel.tf;
+
+    params.back_wheel_vel_pid[0] = pid_gains.back_wheel.kp;
+    params.back_wheel_vel_pid[1] = pid_gains.back_wheel.ki;
+    params.back_wheel_vel_pid[2] = pid_gains.back_wheel.kd;
+    params.back_wheel_vel_pid[3] = pid_gains.back_wheel.tf;
 
     params.control_mode = control_mode;
 
