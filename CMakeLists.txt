@@ -76,6 +76,41 @@ target_compile_definitions(mbot_classic_ros PRIVATE
 )
 
 #=============================================================================
+# Main MBot Omni ROS Executable
+#=============================================================================
+add_executable(mbot_omni_ros
+    src/mbot_omni_ros.c
+    src/mbot_omni_ros.h
+    src/mbot_odometry.c
+    src/mbot_odometry.h
+    src/mbot_print.c
+    src/mbot_print.h
+    src/mbot_ros_comms.c
+    src/mbot_ros_comms.h
+    src/mbot_controller.c
+    src/mbot_controller.h
+)
+
+target_link_libraries(mbot_omni_ros
+    ${COMMON_LIBS}
+    pico_multicore
+    microros
+    mbotlib
+    rclib
+    comms
+)
+
+# Configure USB and output settings for main executable
+pico_enable_stdio_usb(mbot_omni_ros 1)
+pico_enable_stdio_uart(mbot_omni_ros 0)
+pico_add_extra_outputs(mbot_omni_ros)
+
+target_compile_definitions(mbot_omni_ros PRIVATE 
+    CFG_TUD_CDC=2
+    MBOT_OMNI=1
+)
+
+#=============================================================================
 # Test Programs
 #=============================================================================
 
@@ -98,6 +133,26 @@ pico_enable_stdio_usb(mbot_calibrate_classic 1)
 pico_enable_stdio_uart(mbot_calibrate_classic 0)
 pico_add_extra_outputs(mbot_calibrate_classic)
 
+# MBot Omni Calibration
+add_executable(mbot_calibrate_omni
+    tests/mbot_calibrate_omni.c
+)
+target_include_directories(mbot_calibrate_omni PRIVATE
+    include
+    comms/include
+)
+target_link_libraries(mbot_calibrate_omni
+    ${COMMON_LIBS}
+    pico_multicore
+    mbotlib
+    rclib
+    comms
+)
+pico_enable_stdio_usb(mbot_calibrate_omni 1)
+pico_enable_stdio_uart(mbot_calibrate_omni 0)
+pico_add_extra_outputs(mbot_calibrate_omni)
+target_compile_definitions(mbot_calibrate_omni PRIVATE MBOT_OMNI=1)
+
 # Motor Test
 add_executable(mbot_classic_motor_test
     tests/mbot_classic_motor_test.c
@@ -116,6 +171,26 @@ target_link_libraries(mbot_classic_motor_test
 pico_enable_stdio_usb(mbot_classic_motor_test 1)
 pico_enable_stdio_uart(mbot_classic_motor_test 0)
 pico_add_extra_outputs(mbot_classic_motor_test)
+
+# Omni Motor Test
+add_executable(mbot_omni_motor_test
+    tests/mbot_omni_motor_test.c
+)
+target_include_directories(mbot_omni_motor_test PRIVATE
+    include
+    comms/include
+)
+target_link_libraries(mbot_omni_motor_test
+    ${COMMON_LIBS}
+    pico_multicore
+    mbotlib
+    rclib
+    comms
+)
+pico_enable_stdio_usb(mbot_omni_motor_test 1)
+pico_enable_stdio_uart(mbot_omni_motor_test 0)
+pico_add_extra_outputs(mbot_omni_motor_test)
+target_compile_definitions(mbot_omni_motor_test PRIVATE MBOT_OMNI=1)
 
 # Encoder Test
 add_executable(mbot_encoder_test

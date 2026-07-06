@@ -1,5 +1,9 @@
 #include "mbot_ros_comms.h"
+#ifdef MBOT_OMNI
+#include "mbot_omni_ros.h"
+#else
 #include "mbot_classic_ros.h" // For mbot_state_t, mbot_cmd_t, and config defines
+#endif
 #include <string.h>            // For strlen, snprintf in message init
 #include "pico/time.h"
 #include <mbot/motor/motor.h>  // For mbot_motor_set_duty
@@ -31,9 +35,11 @@ rcl_service_t reset_odometry_service;
 std_srvs__srv__Trigger_Request reset_odom_req;
 std_srvs__srv__Trigger_Response reset_odom_res;
 
+#ifndef MBOT_OMNI
 rcl_service_t lidar_power_service;
 std_srvs__srv__SetBool_Request lidar_power_req;
 std_srvs__srv__SetBool_Response lidar_power_res;
+#endif
 
 #define FRAME_ID_CAPACITY 16
 
@@ -55,10 +61,12 @@ int mbot_ros_comms_init_messages(rcl_allocator_t* allocator) {
     reset_odom_res.message.capacity = 128;
     reset_odom_res.message.size = 0;
 
+#ifndef MBOT_OMNI
     std_srvs__srv__SetBool_Response__init(&lidar_power_res);
     lidar_power_res.message.data = (char*)allocator->allocate(128, allocator->state);
     lidar_power_res.message.capacity = 128;
     lidar_power_res.message.size = 0;
+#endif
 
     // IMU message initialization
     imu_msg.header.frame_id.data = imu_frame_id_buf;
@@ -175,6 +183,7 @@ int mbot_ros_comms_init_services(rcl_node_t *node) {
         return MBOT_ERROR;
     }
 
+#ifndef MBOT_OMNI
     // Initialize LiDAR power service
     ret = rclc_service_init_default(
         &lidar_power_service,
@@ -186,6 +195,7 @@ int mbot_ros_comms_init_services(rcl_node_t *node) {
         fflush(stdout);
         return MBOT_ERROR;
     }
+#endif
 
     return MBOT_OK;
 }
@@ -209,6 +219,7 @@ void reset_odometry_callback(const void * req, void * res) {
     printf("[INFO] Odometry reset to origin\n");
 }
 
+#ifndef MBOT_OMNI
 void lidar_power_callback(const void * req, void * res) {
     const std_srvs__srv__SetBool_Request * request = (const std_srvs__srv__SetBool_Request *)req;
     std_srvs__srv__SetBool_Response * response = (std_srvs__srv__SetBool_Response *)res;
@@ -225,6 +236,7 @@ void lidar_power_callback(const void * req, void * res) {
 
     printf("[INFO] LiDAR power %s\n", request->data ? "ON" : "OFF");
 }
+#endif
 
 void cmd_vel_callback(const void * msgin) {
     const geometry_msgs__msg__Twist * twist_msg = (const geometry_msgs__msg__Twist *)msgin;
@@ -275,12 +287,14 @@ int mbot_ros_comms_add_to_executor(rclc_executor_t *executor) {
         return MBOT_ERROR;
     }
 
+#ifndef MBOT_OMNI
     ret = rclc_executor_add_service(executor, &lidar_power_service, &lidar_power_req,
                                    &lidar_power_res, &lidar_power_callback);
     if (ret != RCL_RET_OK) {
         printf("[ERROR] Failed to add lidar_power_service to executor: %d\n", ret);
         return MBOT_ERROR;
     }
+#endif
 
     return MBOT_OK;
 } 

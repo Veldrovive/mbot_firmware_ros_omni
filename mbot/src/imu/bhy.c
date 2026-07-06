@@ -4283,7 +4283,7 @@ u8 v_page_select_u8, u8 v_parameter_request_u8)
     for (; init_array_data < BHY_WRITE_BUFFER_SIZE; init_array_data++)
         v_write_parameter_byte_u8[init_array_data] = BHY_INIT_VALUE;
     /* check the p_bhy structure as NULL*/
-    if (p_bhy == BHY_NULL) {
+    if (p_bhy == 0) {
         return BHY_NULL;
         } else {
         /* Assign the load parameters*/

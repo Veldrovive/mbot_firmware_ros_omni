@@ -1,7 +1,11 @@
 #ifndef MBOT_PRINT_H
 #define MBOT_PRINT_H
 
+#ifdef MBOT_OMNI
+#include "mbot_omni_ros.h"
+#else
 #include "mbot_classic_ros.h" // for mbot_state_t
+#endif
 
 #ifdef __cplusplus
 extern "C" {

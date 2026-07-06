@@ -2,8 +2,13 @@
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <mbot/defs/mbot_params.h>
+#ifdef MBOT_OMNI
+#include "config/mbot_omni_config.h"
+#include "config/mbot_omni_default_pid.h"
+#else
 #include "config/mbot_classic_config.h"
 #include "config/mbot_classic_default_pid.h"
+#endif
 #include <rc/math/filter.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,12 +35,22 @@ void mbot_read_pid_gains(const mbot_params_t* params) {
     pid_gains.right_wheel.kd = params->right_wheel_vel_pid[2];
     pid_gains.right_wheel.tf = params->right_wheel_vel_pid[3];
 
+#ifdef MBOT_OMNI
+    pid_gains.back_wheel.kp = params->back_wheel_vel_pid[0];
+    pid_gains.back_wheel.ki = params->back_wheel_vel_pid[1];
+    pid_gains.back_wheel.kd = params->back_wheel_vel_pid[2];
+    pid_gains.back_wheel.tf = params->back_wheel_vel_pid[3];
+#endif
+
     control_mode = (control_mode_t)params->control_mode;
 }
 
 // PID filters
 rc_filter_t left_wheel_pid;
 rc_filter_t right_wheel_pid;
+#ifdef MBOT_OMNI
+rc_filter_t back_wheel_pid;
+#endif
 rc_filter_t body_vel_vx_pid;
 rc_filter_t body_vel_wz_pid;
 
@@ -43,6 +58,9 @@ int mbot_controller_init(void) {
     // Initialize PID controllers
     left_wheel_pid = rc_filter_empty();
     right_wheel_pid = rc_filter_empty();
+#ifdef MBOT_OMNI
+    back_wheel_pid = rc_filter_empty();
+#endif
     body_vel_vx_pid = rc_filter_empty();
     body_vel_wz_pid = rc_filter_empty();
     
@@ -60,10 +78,22 @@ int mbot_controller_init(void) {
                   pid_gains.right_wheel.kd, 
                   pid_gains.right_wheel.tf, 
                   MAIN_LOOP_PERIOD);
+                  
+#ifdef MBOT_OMNI
+    rc_filter_pid(&back_wheel_pid, 
+                  pid_gains.back_wheel.kp, 
+                  pid_gains.back_wheel.ki, 
+                  pid_gains.back_wheel.kd, 
+                  pid_gains.back_wheel.tf, 
+                  MAIN_LOOP_PERIOD);
+#endif
     
     // Enable saturation for all controllers to limit outputs between -1.0 and 1.0
     rc_filter_enable_saturation(&left_wheel_pid, -1.0, 1.0);
     rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
+#ifdef MBOT_OMNI
+    rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+#endif
 
     return MBOT_OK;
 }
@@ -79,13 +109,33 @@ void mbot_motor_vel_controller(float target_left_vel, float target_right_vel,
     *right_correction = rc_filter_march(&right_wheel_pid, right_error);
 }
 
+#ifdef MBOT_OMNI
+void mbot_omni_motor_vel_controller(float target_left_vel, float target_right_vel, float target_back_vel,
+                              float current_left_vel, float current_right_vel, float current_back_vel,
+                              float* left_correction, float* right_correction, float* back_correction) {
+    float left_error = target_left_vel - current_left_vel;
+    float right_error = target_right_vel - current_right_vel;
+    float back_error = target_back_vel - current_back_vel;
+    
+    // Run PID controllers for each wheel
+    *left_correction = rc_filter_march(&left_wheel_pid, left_error);
+    *right_correction = rc_filter_march(&right_wheel_pid, right_error);
+    *back_correction = rc_filter_march(&back_wheel_pid, back_error);
+}
+#endif
+
+
 int init_parameter_server(rclc_parameter_server_t* parameter_server, rcl_node_t* node) {
     rcl_ret_t ret;
     
     // Initialize parameter server with options for low memory mode
     rclc_parameter_options_t options = {
         .notify_changed_over_dds = false,
-        .max_params = 9,  
+#ifdef MBOT_OMNI
+        .max_params = 13,  
+#else
+        .max_params = 9,
+#endif
         .allow_undeclared_parameters = false,
         .low_mem_mode = false
     };
@@ -115,6 +165,17 @@ int init_parameter_server(rclc_parameter_server_t* parameter_server, rcl_node_t*
     ret = rclc_add_parameter(parameter_server, "right_wheel.tf", RCLC_PARAMETER_DOUBLE);
     if (ret != RCL_RET_OK) return MBOT_ERROR;
 
+#ifdef MBOT_OMNI
+    ret = rclc_add_parameter(parameter_server, "back_wheel.kp", RCLC_PARAMETER_DOUBLE);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_add_parameter(parameter_server, "back_wheel.ki", RCLC_PARAMETER_DOUBLE);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_add_parameter(parameter_server, "back_wheel.kd", RCLC_PARAMETER_DOUBLE);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_add_parameter(parameter_server, "back_wheel.tf", RCLC_PARAMETER_DOUBLE);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+#endif
+
     ret = rclc_add_parameter(parameter_server, "control_mode", RCLC_PARAMETER_INT);
     if (ret != RCL_RET_OK) return MBOT_ERROR;
 
@@ -136,6 +197,17 @@ int init_parameter_server(rclc_parameter_server_t* parameter_server, rcl_node_t*
     if (ret != RCL_RET_OK) return MBOT_ERROR;
     ret = rclc_parameter_set_double(parameter_server, "right_wheel.tf", pid_gains.right_wheel.tf);
     if (ret != RCL_RET_OK) return MBOT_ERROR;
+
+#ifdef MBOT_OMNI
+    ret = rclc_parameter_set_double(parameter_server, "back_wheel.kp", pid_gains.back_wheel.kp);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_parameter_set_double(parameter_server, "back_wheel.ki", pid_gains.back_wheel.ki);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_parameter_set_double(parameter_server, "back_wheel.kd", pid_gains.back_wheel.kd);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+    ret = rclc_parameter_set_double(parameter_server, "back_wheel.tf", pid_gains.back_wheel.tf);
+    if (ret != RCL_RET_OK) return MBOT_ERROR;
+#endif
     
     ret = rclc_parameter_set_int(parameter_server, "control_mode", control_mode);
     if (ret != RCL_RET_OK) return MBOT_ERROR;
@@ -215,6 +287,40 @@ bool parameter_callback(const Parameter * old_param, const Parameter * new_param
             rc_filter_enable_saturation(&right_wheel_pid, -1.0, 1.0);
             pid_updated = true;
         }
+#ifdef MBOT_OMNI
+    } else if (strcmp(param_name, "back_wheel.kp") == 0) {
+        if (new_param->value.type == RCLC_PARAMETER_DOUBLE) {
+            pid_gains.back_wheel.kp = new_param->value.double_value;
+            rc_filter_pid(&back_wheel_pid, pid_gains.back_wheel.kp, pid_gains.back_wheel.ki, 
+                          pid_gains.back_wheel.kd, pid_gains.back_wheel.tf, MAIN_LOOP_PERIOD);
+            rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+            pid_updated = true;
+        }
+    } else if (strcmp(param_name, "back_wheel.ki") == 0) {
+        if (new_param->value.type == RCLC_PARAMETER_DOUBLE) {
+            pid_gains.back_wheel.ki = new_param->value.double_value;
+            rc_filter_pid(&back_wheel_pid, pid_gains.back_wheel.kp, pid_gains.back_wheel.ki, 
+                          pid_gains.back_wheel.kd, pid_gains.back_wheel.tf, MAIN_LOOP_PERIOD);
+            rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+            pid_updated = true;
+        }
+    } else if (strcmp(param_name, "back_wheel.kd") == 0) {
+        if (new_param->value.type == RCLC_PARAMETER_DOUBLE) {
+            pid_gains.back_wheel.kd = new_param->value.double_value;
+            rc_filter_pid(&back_wheel_pid, pid_gains.back_wheel.kp, pid_gains.back_wheel.ki, 
+                          pid_gains.back_wheel.kd, pid_gains.back_wheel.tf, MAIN_LOOP_PERIOD);
+            rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+            pid_updated = true;
+        }
+    } else if (strcmp(param_name, "back_wheel.tf") == 0) {
+        if (new_param->value.type == RCLC_PARAMETER_DOUBLE) {
+            pid_gains.back_wheel.tf = new_param->value.double_value;
+            rc_filter_pid(&back_wheel_pid, pid_gains.back_wheel.kp, pid_gains.back_wheel.ki, 
+                          pid_gains.back_wheel.kd, pid_gains.back_wheel.tf, MAIN_LOOP_PERIOD);
+            rc_filter_enable_saturation(&back_wheel_pid, -1.0, 1.0);
+            pid_updated = true;
+        }
+#endif
     } else if (strcmp(param_name, "control_mode") == 0) {
         if (new_param->value.type == RCLC_PARAMETER_INT) {
             int val = new_param->value.integer_value;
@@ -240,6 +346,13 @@ int mbot_save_params_to_fram(void) {
     params.right_wheel_vel_pid[1] = pid_gains.right_wheel.ki;
     params.right_wheel_vel_pid[2] = pid_gains.right_wheel.kd;
     params.right_wheel_vel_pid[3] = pid_gains.right_wheel.tf;
+
+#ifdef MBOT_OMNI
+    params.back_wheel_vel_pid[0] = pid_gains.back_wheel.kp;
+    params.back_wheel_vel_pid[1] = pid_gains.back_wheel.ki;
+    params.back_wheel_vel_pid[2] = pid_gains.back_wheel.kd;
+    params.back_wheel_vel_pid[3] = pid_gains.back_wheel.tf;
+#endif
 
     params.control_mode = control_mode;
 

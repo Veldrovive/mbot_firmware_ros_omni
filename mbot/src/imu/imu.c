@@ -1,5 +1,6 @@
 #include <mbot/imu/imu.h>
 #include <mbot/imu/firmware/BHI160B_fw.h>
+#include <math.h>
 #include <mbot/utils/utils.h>
 #include <pico/stdlib.h>
 
